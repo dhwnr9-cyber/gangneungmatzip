@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write
 
+# 같은 워크플로가 겹쳐서 실행되는 걸 막는다 (겹치면 git push 충돌이 남).
+# 이미 돌고 있으면, 새 실행은 끝날 때까지 줄 서서 기다린다.
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
@@ -40,4 +46,5 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add congestion_data.json festival_news.json
           git diff --staged --quiet || git commit -m "혼잡도·축제소식 자동 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git pull --rebase origin main
           git push
