@@ -1,0 +1,47 @@
+.github/workflows/update-congestion.yml
+name: 혼잡도·축제소식 자동 갱신
+
+# 언제 실행할지
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # 10분마다 (UTC 기준. GitHub 무료 요금제에서 가능한 최소 간격은 사실상 5분이지만 여유있게 10분)
+  workflow_dispatch:          # "Actions" 탭에서 수동으로도 실행 가능
+
+# 이 워크플로가 저장소에 파일을 커밋할 수 있게 권한 부여
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: |
+          pip install -r requirements.txt
+          pip install git+https://github.com/m-wrzr/populartimes
+
+      - name: 혼잡도 수집 실행
+        env:
+          # 아래 두 값은 GitHub 저장소 Settings > Secrets and variables > Actions 에서 등록한다
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PUBLIC_DATA_KEY: ${{ secrets.PUBLIC_DATA_KEY }}
+        run: python collect_congestion.py
+
+      - name: 강릉 축제·행사 소식 수집 실행
+        run: python collect_festival_news.py
+
+      - name: 변경된 데이터 커밋 & 푸시
+        run: |
+          git config user.name "congestion-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add congestion_data.json festival_news.json
+          git diff --staged --quiet || git commit -m "혼잡도·축제소식 자동 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push
