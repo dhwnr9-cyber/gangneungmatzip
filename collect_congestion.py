@@ -88,35 +88,60 @@ def fetch_google(place):
     try:
         import populartimes  # pip install git+https://github.com/m-wrzr/populartimes
         import googlemaps
-    except ImportError:
-        print("  ! populartimes / googlemaps 미설치 → 구글 데이터 건너뜀")
+    except ImportError as e:
+        print(f"    ! populartimes / googlemaps 미설치 → {e}")
         return None
 
     gmaps = googlemaps.Client(key=GOOGLE_API_KEY)
 
     # 1) 이름으로 place_id 찾기
-    found = gmaps.find_place(
-        input=place["query"], input_type="textquery",
-        fields=["place_id", "geometry/location"],
-    )
+    try:
+        found = gmaps.find_place(
+            input=place["query"], input_type="textquery",
+            fields=["place_id", "geometry/location"],
+        )
+    except Exception as e:
+        print(f"    ! find_place 요청 자체가 실패함 ({type(e).__name__}): {e}")
+        return None
+
+    status = found.get("status")
+    if status != "OK":
+        print(f"    ! find_place 응답 상태 이상: status={status}, 원본={found}")
+        return None
+
     cands = found.get("candidates", [])
     if not cands:
-        print(f"  ! '{place['name']}' 구글에서 못 찾음")
+        print(f"    ! '{place['name']}' 구글에서 못 찾음 (candidates 비어있음)")
         return None
     place_id = cands[0]["place_id"]
     loc = cands[0].get("geometry", {}).get("location", {})
+    print(f"    · place_id 찾음: {place_id}")
 
-    # 2) Popular Times 조회
-    data = populartimes.get_id(GOOGLE_API_KEY, place_id)
+    # 2) Popular Times 조회 (populartimes는 비공식 라이브러리라 구글이 페이지
+    #    구조를 바꾸면 언제든 깨질 수 있다 — 그래서 여기 실패를 아주 자세히 찍는다)
+    try:
+        data = populartimes.get_id(GOOGLE_API_KEY, place_id)
+    except Exception as e:
+        print(f"    ! populartimes.get_id 실패 ({type(e).__name__}): {e}")
+        return None
+
+    if not isinstance(data, dict):
+        print(f"    ! populartimes 응답이 예상과 다름 (dict 아님): {type(data)} → {str(data)[:200]}")
+        return None
+
+    raw_populartimes = data.get("populartimes", [])
+    if not raw_populartimes:
+        print(f"    ! 이 가게는 구글에 요일별 혼잡도 데이터 자체가 없음 (populartimes 비어있음)")
 
     weekly = {}
-    for day_block in data.get("populartimes", []):
+    for day_block in raw_populartimes:
         # day_block = {"name":"Monday","data":[24개 0~100]}
         idx = ["Monday","Tuesday","Wednesday","Thursday",
                "Friday","Saturday","Sunday"].index(day_block["name"])
         weekly[DAYS[idx]] = [int(x) for x in day_block["data"]]
 
     current = data.get("current_popularity")  # 실시간 (없을 수 있음)
+    print(f"    · 결과: current={current}, weekly 요일 수={len(weekly)}")
 
     return {
         "lat": loc.get("lat"),
@@ -156,7 +181,10 @@ def fetch_public_footfall():
         if not rows:
             return None
         # 현재 시각대의 유동인구를 0~100으로 정규화 (예시 로직)
-        hour = dt.datetime.now().hour
+        # ⚠️ GitHub Actions 서버는 UTC로 돌아가므로, 그냥 datetime.now()를 쓰면
+        # 한국 시간이 아니라 UTC 기준 시각이 나온다. 반드시 KST로 변환해서 써야 한다.
+        kst = dt.timezone(dt.timedelta(hours=9))
+        hour = dt.datetime.now(kst).hour
         vals = [float(row.get("유동인구수", 0)) for row in rows]
         if not vals:
             return None
@@ -177,6 +205,17 @@ def fetch_public_footfall():
 # ══════════════════════════════════════════════════════
 def build():
     print("혼잡도 수집 시작…")
+
+    # 맨 처음에 딱 한 번, 라이브러리가 제대로 설치됐는지 확인해서 찍는다.
+    # (설치 자체가 안 됐으면 모든 가게가 똑같이 null로 나오니, 여기서 바로 알 수 있게)
+    try:
+        import populartimes as _pt
+        import googlemaps as _gm
+        print(f"  · googlemaps 임포트 OK, populartimes 임포트 OK")
+    except ImportError as e:
+        print(f"  !!! 라이브러리 임포트 자체가 실패함: {e}")
+        print(f"  !!! 이러면 모든 가게가 estimate(null)로 나온다 — requirements.txt/설치 단계 확인 필요")
+
     footfall = fetch_public_footfall()
     print(f"  · 공공 유동인구 지역보정값: {footfall}")
 
@@ -187,7 +226,7 @@ def build():
         try:
             g = fetch_google(p)
         except Exception as e:
-            print(f"    구글 실패: {e}")
+            print(f"    ! 예상 못한 오류 ({type(e).__name__}): {e}")
         time.sleep(0.4)  # API rate limit 배려
 
         row = {"name": p["name"]}
@@ -197,17 +236,17 @@ def build():
                 "current": g["current"], "weekly": g["weekly"],
                 "footfall": footfall,
                 "source": "google",
-                "updated": dt.datetime.now().isoformat(timespec="seconds"),
+                "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
             })
         else:
             # 구글 실패한 가게는 값 없이 넣어둠 → 프론트가 자체 추정으로 폴백
             row.update({"current": None, "weekly": None,
                         "footfall": footfall, "source": "estimate",
-                        "updated": dt.datetime.now().isoformat(timespec="seconds")})
+                        "updated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")})
         out_places.append(row)
 
     payload = {
-        "generated": dt.datetime.now().isoformat(timespec="seconds"),
+        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "places": out_places,
     }
     OUT_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
