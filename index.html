@@ -557,7 +557,7 @@ function renderSheet(){
   let srcTxt="";
   if(live&&liveMode&&live.current!=null&&viewHour===new Date().getHours())srcTxt='<b>구글 실시간</b> 인구 데이터';
   else if(live&&live.weekly)srcTxt='<b>실측 방문패턴</b> 기반'+(live.footfall!=null?' · 공공 유동인구 보정':'');
-  else srcTxt='업종 방문패턴 <b>추정치</b> (실데이터 미연결)';
+  else srcTxt='업종 방문패턴 <b>추정치</b>';
   document.getElementById('sSrc').innerHTML=srcTxt;
   document.getElementById('sWait').textContent=(liveMode?"지금 ":viewHour+"시 기준 ")+li.wait+" · 혼잡도 "+v+"/100";
   document.getElementById('tOut').textContent=liveMode?"지금":viewHour+":00";
