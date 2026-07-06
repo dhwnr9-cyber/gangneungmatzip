@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gangneungmatzip.co.kr/sitemap.xml
