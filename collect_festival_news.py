@@ -103,7 +103,7 @@ def build():
         items = []
 
     payload = {
-        "generated": dt.datetime.now().isoformat(timespec="seconds"),
+        "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "source": SOURCE_URL,
         "items": items,
     }
