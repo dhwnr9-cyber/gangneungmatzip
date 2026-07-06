@@ -42,7 +42,8 @@
   .result-empty{padding:16px;text-align:center;color:#8fa3b3;font-size:.9rem;}
 
   .layout{display:flex;gap:14px;align-items:stretch;}
-  .ad-col{width:180px;flex:none;display:flex;flex-direction:column;gap:10px;position:relative;transition:width .25s ease;}
+  .ad-col{width:180px;flex:none;display:flex;flex-direction:column;gap:10px;position:relative;}
+  .ad-row{display:flex;flex-direction:column;gap:10px;flex:1;}
   .ad-slot{flex:1;min-height:200px;background:linear-gradient(160deg,#eaf1f5,#d9e6ee);border:1px dashed #a9c0cf;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
   .ad-slot .ad-tag{position:absolute;top:6px;left:8px;font-size:.6rem;font-weight:800;color:#5d7284;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:6px;}
   .ad-slot .ad-inner{font-size:.8rem;font-weight:700;color:#5d7284;text-align:center;padding:8px;}
@@ -50,7 +51,6 @@
   .ad-slot a{display:flex;width:100%;height:100%;align-items:center;justify-content:center;text-decoration:none;color:inherit;}
   .ad-contact{font-size:.68rem;color:#8fa3b3;text-align:center;line-height:1.5;padding:4px 2px;}
   .ad-contact b{color:var(--sea);}
-  .ad-toggle{display:none;}
 
   .map-card{flex:1;min-width:0;position:relative;height:75vh;min-height:420px;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(19,41,61,.18);background:#e3ebf0;}
   #map{position:absolute;inset:0;}
@@ -131,24 +131,16 @@
     .page{padding:8px;}
     .brand h1{font-size:1.05rem;}
 
-    /* 기본은 얇은 탭만 보여서 지도를 넓게 쓰고, 탭하면 광고가 펼쳐진다 */
-    .ad-col{width:26px;overflow:hidden;gap:6px;}
-    .ad-col.expanded{width:132px;}
-    .ad-slot{min-width:132px;min-height:150px;}
-    .ad-slot .ad-inner{font-size:.68rem;}
-    .ad-contact{min-width:132px;font-size:.62rem;}
-    .ad-toggle{
-      display:flex;align-items:center;justify-content:center;
-      position:absolute;top:50%;transform:translateY(-50%);
-      width:26px;height:60px;background:var(--sea);color:#fff;border:none;
-      font-size:.62rem;font-weight:800;writing-mode:vertical-rl;letter-spacing:.05em;
-      cursor:pointer;z-index:5;
-    }
-    .ad-col.left .ad-toggle{left:0;border-radius:0 10px 10px 0;}
-    .ad-col.right .ad-toggle{right:0;border-radius:10px 0 0 10px;}
-    .ad-col.expanded .ad-toggle{background:#1c5270;}
+    /* 지도 양옆이 아니라 위/아래로: 지도는 넓게, 광고는 상시 노출 */
+    .layout{flex-direction:column;}
+    .ad-col{order:1;width:100%;flex-direction:column;gap:4px;}
+    .ad-col.right{order:3;}
+    .map-card{order:2;height:56vh;}
+    .ad-row{flex-direction:row;gap:8px;}
+    .ad-slot{min-height:80px;}
+    .ad-slot .ad-inner{font-size:.7rem;}
+    .ad-contact{font-size:.62rem;padding:2px;}
 
-    .map-card{height:66vh;}
     .legend{font-size:.6rem;padding:6px 8px;top:8px;right:8px;}
     .locate-btn{width:38px;height:38px;bottom:60px;}
     .news-panel{padding:12px 14px;}
@@ -175,11 +167,12 @@
   </header>
 
   <div class="layout">
-    <aside class="ad-col left" id="adColLeft">
-      <button class="ad-toggle" onclick="toggleAdCol('adColLeft')" aria-label="광고 펼치기/접기">광고</button>
-      <div class="ad-slot" id="ad-l1"><span class="ad-tag">광고</span><div class="ad-inner">광고 L1</div></div>
-      <div class="ad-slot" id="ad-l2"><span class="ad-tag">광고</span><div class="ad-inner">광고 L2</div></div>
-      <div class="ad-contact">광고문의<br><b>05x@naver.com</b></div>
+    <aside class="ad-col left">
+      <div class="ad-row">
+        <div class="ad-slot" id="ad-l1"><span class="ad-tag">광고</span><div class="ad-inner">광고 L1</div></div>
+        <div class="ad-slot" id="ad-l2"><span class="ad-tag">광고</span><div class="ad-inner">광고 L2</div></div>
+      </div>
+      <div class="ad-contact">광고문의 <b>05x@naver.com</b></div>
     </aside>
 
     <div class="map-card" id="mapCard">
@@ -205,11 +198,12 @@
       <div class="toast" id="toast"></div>
     </div>
 
-    <aside class="ad-col right" id="adColRight">
-      <button class="ad-toggle" onclick="toggleAdCol('adColRight')" aria-label="광고 펼치기/접기">광고</button>
-      <div class="ad-slot" id="ad-r1"><span class="ad-tag">광고</span><div class="ad-inner">광고 R1</div></div>
-      <div class="ad-slot" id="ad-r2"><span class="ad-tag">광고</span><div class="ad-inner">광고 R2</div></div>
-      <div class="ad-contact">광고문의<br><b>05x@naver.com</b></div>
+    <aside class="ad-col right">
+      <div class="ad-row">
+        <div class="ad-slot" id="ad-r1"><span class="ad-tag">광고</span><div class="ad-inner">광고 R1</div></div>
+        <div class="ad-slot" id="ad-r2"><span class="ad-tag">광고</span><div class="ad-inner">광고 R2</div></div>
+      </div>
+      <div class="ad-contact">광고문의 <b>05x@naver.com</b></div>
     </aside>
   </div>
 
@@ -504,23 +498,6 @@ async function loadRealData(){
   }
 }
 loadRealData();setInterval(loadRealData,120000);
-
-/* ═══════════ 모바일 광고 탭 접기/펼치기 ═══════════
-   기본은 얇게 접혀서 지도를 넓게 쓰고, 탭하면 펼쳐진다.
-   처음 들어왔을 때는 광고가 있다는 걸 알 수 있게 잠깐 펼쳤다가 자동으로 접는다. */
-function toggleAdCol(id){
-  document.getElementById(id).classList.toggle('expanded');
-}
-if (window.innerWidth<=900){
-  setTimeout(()=>{
-    document.getElementById('adColLeft').classList.add('expanded');
-    document.getElementById('adColRight').classList.add('expanded');
-  },400);
-  setTimeout(()=>{
-    document.getElementById('adColLeft').classList.remove('expanded');
-    document.getElementById('adColRight').classList.remove('expanded');
-  },3200);
-}
 
 /* ═══════════ 오늘 방문자수 (한국시간 0시~23시59분 기준으로 자동 리셋) ═══════════
    무료 카운터 서비스(CounterAPI)를 쓴다. 이런 무료 서비스는 가끔 불안정할 수 있어서,
