@@ -1,0 +1,6 @@
+flask>=3.0
+googlemaps>=4.10
+requests>=2.31
+beautifulsoup4>=4.12
+# populartimes 는 PyPI 가 아니라 깃허브에서 설치:
+#   pip install git+https://github.com/m-wrzr/populartimes

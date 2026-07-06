@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>강릉 맛집지도 — 실시간 혼잡도</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  :root{
+    --ink:#13293D; --paper:#F5F8FA; --sea:#2D6E8E;
+    --free:#1F9D6B; --normal:#F0A93B; --busy:#E5484D; --verybusy:#B3202C;
+    --radius:14px; font-size:16px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;}
+  body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;color:var(--ink);background:var(--paper);}
+
+  /* ═══════ 페이지 레이아웃: 지도는 페이지 "안"에, 광고는 지도 "옆"에 ═══════ */
+  .page{max-width:1440px;margin:0 auto;padding:16px;}
+  .site-header{margin-bottom:12px;}
+  .brand{display:flex;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+  .brand h1{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
+  .brand .live{font-size:.7rem;font-weight:700;color:#fff;background:var(--sea);padding:4px 8px;border-radius:8px;}
+  .brand .src{font-size:.62rem;font-weight:700;color:#fff;padding:4px 7px;border-radius:8px;}
+  .src.real{background:#1F9D6B;} .src.demo{background:#8fa3b3;}
+  .visitor-badge{display:none;align-items:center;gap:6px;width:fit-content;font-size:.72rem;font-weight:700;color:var(--sea);background:#eaf3f7;padding:5px 12px;border-radius:20px;margin-bottom:10px;}
+  .visitor-badge.show{display:inline-flex;}
+  .visitor-badge .vdot{width:6px;height:6px;border-radius:50%;background:#1F9D6B;flex:none;}
+  .searchwrap{position:relative;}
+  .searchbox{display:flex;align-items:center;gap:8px;background:#fff;border-radius:var(--radius);box-shadow:0 4px 14px rgba(19,41,61,.12);padding:12px 14px;}
+  .searchbox svg{flex:none;}
+  .searchbox input{flex:1;border:none;outline:none;font-size:1rem;color:var(--ink);background:transparent;}
+  .searchbox input::placeholder{color:#8fa3b3;}
+  .results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:#fff;border-radius:var(--radius);box-shadow:0 8px 24px rgba(19,41,61,.22);max-height:280px;overflow-y:auto;display:none;z-index:1200;}
+  .results.show{display:block;}
+  .result-item{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;cursor:pointer;border-bottom:1px solid #eef2f5;}
+  .result-item:last-child{border-bottom:none;}
+  .result-item:active{background:#f0f5f8;}
+  .result-item .r-name{font-weight:700;font-size:.95rem;}
+  .result-item .r-cat{font-size:.75rem;color:#7a8fa0;margin-top:2px;}
+  .result-empty{padding:16px;text-align:center;color:#8fa3b3;font-size:.9rem;}
+
+  .layout{display:flex;gap:14px;align-items:stretch;}
+  .ad-col{width:180px;flex:none;display:flex;flex-direction:column;gap:10px;}
+  .ad-slot{flex:1;min-height:200px;background:linear-gradient(160deg,#eaf1f5,#d9e6ee);border:1px dashed #a9c0cf;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
+  .ad-slot .ad-tag{position:absolute;top:6px;left:8px;font-size:.6rem;font-weight:800;color:#5d7284;background:rgba(255,255,255,.85);padding:2px 6px;border-radius:6px;}
+  .ad-slot .ad-inner{font-size:.8rem;font-weight:700;color:#5d7284;text-align:center;padding:8px;}
+  .ad-slot img{width:100%;height:100%;object-fit:cover;}
+  .ad-slot a{display:flex;width:100%;height:100%;align-items:center;justify-content:center;text-decoration:none;color:inherit;}
+
+  .map-card{flex:1;min-width:0;position:relative;height:75vh;min-height:420px;border-radius:18px;overflow:hidden;box-shadow:0 8px 30px rgba(19,41,61,.18);background:#e3ebf0;}
+  #map{position:absolute;inset:0;}
+
+  /* ═══ 축제·행사 소식 패널 (지도 하단, 페이지 안) ═══ */
+  .news-panel{margin-top:14px;background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(19,41,61,.1);padding:16px 18px;}
+  .news-panel h2{font-size:.95rem;font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+  .news-panel h2 .tag{font-size:.62rem;font-weight:700;color:#fff;background:var(--sea);padding:3px 8px;border-radius:8px;}
+  .news-list{display:flex;flex-direction:column;gap:2px;}
+  .news-item{display:flex;align-items:baseline;gap:10px;padding:9px 4px;border-bottom:1px solid #f0f3f5;text-decoration:none;color:inherit;}
+  .news-item:last-child{border-bottom:none;}
+  .news-item:hover{background:#f7fafb;}
+  .news-item .n-title{flex:1;font-size:.85rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .news-item .n-date{flex:none;font-size:.72rem;color:#8fa3b3;}
+  .news-empty{font-size:.8rem;color:#8fa3b3;padding:6px 4px;}
+  .news-empty a{color:var(--sea);font-weight:700;}
+
+  .legend{position:absolute;top:12px;right:12px;z-index:900;background:rgba(255,255,255,.94);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(19,41,61,.15);font-size:.72rem;line-height:1.9;}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .datanote{position:absolute;bottom:12px;left:12px;z-index:900;background:rgba(19,41,61,.85);color:#dce8f0;font-size:.68rem;padding:6px 10px;border-radius:8px;max-width:60%;}
+
+  .tilewarn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:850;background:#fff;color:var(--ink);border-radius:14px;padding:18px 20px;max-width:80%;text-align:center;font-size:.85rem;line-height:1.6;box-shadow:0 8px 30px rgba(19,41,61,.28);display:none;}
+  .tilewarn b{color:var(--sea);}
+  .tilewarn.show{display:block;}
+  .tilewarn button{margin-top:12px;border:none;background:#eef2f5;color:#5d7284;padding:8px 14px;border-radius:10px;font-size:.8rem;font-weight:700;}
+
+  .locate-btn{position:absolute;right:12px;bottom:70px;z-index:900;width:44px;height:44px;border-radius:12px;background:#fff;border:none;box-shadow:0 3px 12px rgba(19,41,61,.22);display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .locate-btn svg{stroke:var(--sea);}
+  .locate-btn.on svg{stroke:#fff;} .locate-btn.on{background:var(--sea);}
+
+  .toast{position:absolute;left:50%;bottom:16px;transform:translateX(-50%) translateY(20px);z-index:1000;background:rgba(19,41,61,.94);color:#fff;font-size:.82rem;font-weight:600;padding:10px 16px;border-radius:22px;opacity:0;transition:.25s;pointer-events:none;max-width:85%;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  .userdot{width:18px;height:18px;border-radius:50%;background:#2D6E8E;border:3px solid #fff;box-shadow:0 0 0 4px rgba(45,110,142,.3);transform:translate(-50%,-50%);}
+  .userdot::after{content:'';position:absolute;inset:-3px;border-radius:50%;animation:upulse 1.8s infinite;}
+  @keyframes upulse{0%{box-shadow:0 0 0 0 rgba(45,110,142,.4);}70%{box-shadow:0 0 0 14px rgba(45,110,142,0);}100%{box-shadow:0 0 0 0 rgba(45,110,142,0);}}
+
+  .pin{transform:translate(-50%,-50%);}
+  .pin .dotpin{width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 6px rgba(19,41,61,.35);}
+  .pin .label{position:absolute;left:26px;top:50%;transform:translateY(-50%);background:#fff;border-radius:8px;padding:3px 8px;font-size:.72rem;font-weight:700;white-space:nowrap;box-shadow:0 2px 8px rgba(19,41,61,.22);border-left:3px solid;}
+  .pin.hideLabel .label{display:none;}
+  .pin.sel .dotpin{width:26px;height:26px;box-shadow:0 0 0 4px rgba(45,110,142,.35),0 2px 8px rgba(19,41,61,.4);}
+  .pin.busy .dotpin,.pin.verybusy .dotpin{animation:pulse 1.6s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(229,72,77,.5);}70%{box-shadow:0 0 0 10px rgba(229,72,77,0);}100%{box-shadow:0 0 0 0 rgba(229,72,77,0);}}
+  @media (prefers-reduced-motion:reduce){.pin .dotpin,.userdot::after{animation:none!important;}}
+
+  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1100;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -8px 30px rgba(19,41,61,.25);padding:10px 18px calc(18px + env(safe-area-inset-bottom));transform:translateY(105%);transition:transform .28s ease;max-height:74vh;overflow-y:auto;max-width:1440px;margin:0 auto;left:0;right:0;}
+  .sheet.open{transform:translateY(0);}
+  .grab{width:42px;height:4px;background:#d7e0e7;border-radius:2px;margin:0 auto 12px;}
+  .s-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .s-name{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;}
+  .s-cat{font-size:.8rem;color:#7a8fa0;margin-top:3px;}
+  .s-dist{font-size:.75rem;color:var(--sea);font-weight:700;margin-top:4px;}
+  .s-close{flex:none;border:none;background:#eef2f5;color:#5d7284;width:32px;height:32px;border-radius:50%;font-size:1rem;cursor:pointer;}
+  .status{display:flex;align-items:center;gap:12px;margin:16px 0 6px;padding:14px;border-radius:var(--radius);}
+  .status .big{font-size:1.5rem;font-weight:800;color:#fff;}
+  .status .sub{font-size:.78rem;color:rgba(255,255,255,.85);margin-top:2px;}
+  .status .pct{margin-left:auto;text-align:right;color:#fff;}
+  .status .pct b{font-size:1.3rem;}
+  .status .pct span{display:block;font-size:.68rem;opacity:.85;}
+  .srcline{font-size:.72rem;color:#8fa3b3;margin-bottom:14px;padding-left:2px;}
+  .srcline b{color:var(--sea);}
+  .waitline{font-size:.82rem;color:#5d7284;margin-bottom:16px;padding-left:2px;}
+  .chart-title{font-size:.85rem;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;}
+  .chart-title .hint{font-weight:500;font-size:.72rem;color:#8fa3b3;}
+  .chart{display:flex;align-items:flex-end;gap:3px;height:110px;margin-bottom:4px;}
+  .bar{flex:1;border-radius:4px 4px 0 0;background:#dbe5ec;min-height:4px;position:relative;transition:height .3s ease;}
+  .bar.now{outline:2px solid var(--ink);outline-offset:1px;}
+  .hours{display:flex;gap:3px;font-size:.58rem;color:#8fa3b3;margin-bottom:16px;}
+  .hours span{flex:1;text-align:center;}
+  .slider-row{margin-bottom:8px;}
+  .slider-row label{font-size:.85rem;font-weight:700;display:flex;justify-content:space-between;margin-bottom:8px;}
+  .slider-row label output{color:var(--sea);}
+  input[type=range]{width:100%;accent-color:var(--sea);}
+  .nowbtn{margin-top:10px;width:100%;padding:12px;border:none;border-radius:var(--radius);background:var(--ink);color:#fff;font-size:.95rem;font-weight:700;cursor:pointer;}
+
+  @media (max-width:900px){
+    .page{padding:8px;}
+    .brand h1{font-size:1.05rem;}
+    .ad-col{width:58px;gap:8px;}
+    .ad-slot{min-height:140px;}
+    .ad-slot .ad-tag{font-size:.5rem;padding:1px 4px;left:3px;top:3px;}
+    .ad-slot .ad-inner{writing-mode:vertical-rl;text-orientation:mixed;font-size:.62rem;letter-spacing:.02em;}
+    .map-card{height:68vh;}
+    .legend{font-size:.6rem;padding:6px 8px;top:8px;right:8px;}
+    .locate-btn{width:38px;height:38px;bottom:60px;}
+    .news-panel{padding:12px 14px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <header class="site-header">
+    <div class="visitor-badge" id="visitorBadge"><span class="vdot"></span><span id="visitorText">오늘 방문자 -명</span></div>
+    <div class="brand">
+      <h1>강릉 맛집지도</h1>
+      <span class="live" id="clock">·</span>
+      <span class="src demo" id="srcBadge">추정</span>
+    </div>
+    <div class="searchwrap">
+      <div class="searchbox">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2D6E8E" stroke-width="2.4" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+        <input id="search" type="text" placeholder="예: 엄지네포장마차" autocomplete="off">
+      </div>
+      <div class="results" id="results"></div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="ad-col left">
+      <div class="ad-slot" id="ad-l1"><span class="ad-tag">광고</span><div class="ad-inner">광고 L1</div></div>
+      <div class="ad-slot" id="ad-l2"><span class="ad-tag">광고</span><div class="ad-inner">광고 L2</div></div>
+    </aside>
+
+    <div class="map-card" id="mapCard">
+      <div id="map"></div>
+      <button class="locate-btn" id="locateBtn" title="내 위치" aria-label="내 위치">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      </button>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--free)"></span>여유</div>
+        <div><span class="dot" style="background:var(--normal)"></span>보통</div>
+        <div><span class="dot" style="background:var(--busy)"></span>혼잡</div>
+        <div><span class="dot" style="background:var(--verybusy)"></span>매우 혼잡</div>
+        <div style="margin-top:6px;padding-top:6px;border-top:1px solid #e5eaee;color:#8fa3b3;font-size:.65rem;line-height:1.6;">
+          큰 원 = 지역 전체 밀집도<br>작은 점 = 개별 가게
+        </div>
+      </div>
+      <div class="tilewarn" id="tilewarn">
+        지도 배경이 안 보이나요?<br>이 화면을 <b>사파리·크롬</b>에서 열어주세요.<br>
+        <span style="font-size:.75rem;color:#8fa3b3">앱 안의 미리보기 창은 지도 타일을 차단할 수 있어요.</span><br>
+        <button onclick="document.getElementById('tilewarn').classList.remove('show')">닫기</button>
+      </div>
+      <div class="datanote" id="datanote">데이터 불러오는 중…</div>
+      <div class="toast" id="toast"></div>
+    </div>
+
+    <aside class="ad-col right">
+      <div class="ad-slot" id="ad-r1"><span class="ad-tag">광고</span><div class="ad-inner">광고 R1</div></div>
+      <div class="ad-slot" id="ad-r2"><span class="ad-tag">광고</span><div class="ad-inner">광고 R2</div></div>
+    </aside>
+  </div>
+
+  <section class="news-panel">
+    <h2>🎪 강릉 축제·행사 소식 <span class="tag">자동 업데이트</span></h2>
+    <div class="news-list" id="newsList">
+      <div class="news-empty">소식을 불러오는 중입니다…</div>
+    </div>
+  </section>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="grab"></div>
+  <div class="s-head">
+    <div><div class="s-name" id="sName">-</div><div class="s-cat" id="sCat">-</div><div class="s-dist" id="sDist"></div></div>
+    <button class="s-close" onclick="closeSheet()">✕</button>
+  </div>
+  <div class="status" id="sStatus">
+    <div><div class="big" id="sLevel">-</div><div class="sub" id="sDesc">-</div></div>
+    <div class="pct"><b id="sPct">-</b><span>혼잡도 지수</span></div>
+  </div>
+  <div class="srcline" id="sSrc"></div>
+  <div class="waitline" id="sWait"></div>
+  <div class="chart-title">시간대별 혼잡도 <span class="hint" id="dayHint"></span></div>
+  <div class="chart" id="chart"></div>
+  <div class="hours" id="hourLabels"></div>
+  <div class="slider-row">
+    <label>다른 시간 미리보기 <output id="tOut">지금</output></label>
+    <input type="range" id="tSlider" min="9" max="23" step="1">
+  </div>
+  <button class="nowbtn" onclick="resetNow()">지금 시각으로 보기</button>
+</div>
+
+<script>
+/* ═══════════ 맛집 목록 (구글 지도 실제 좌표로 검증·수정) ═══════════
+   ⚠️ 아래 중 두 곳은 이름이 바뀌었습니다 (강릉 사시는 분 확인 요망):
+   - 봉브레드 → 만동빵집 (봉브레드는 실제로 속초 소재라 강릉 중앙시장 근처
+     마늘빵·어니언베이글 명물인 만동빵집으로 교체)
+   - 원조교동짬뽕 → 교동반점 (그 정확한 상호는 못 찾았고, 교동짬뽕의
+     원조 격인 교동반점 명주동 본점 좌표를 사용. 다른 곳이면 알려주세요) */
+const PLACES = [
+  {name:"엄지네포장마차 본점", cat:"꼬막비빔밥 · 육사시미", lat:37.7663141, lng:128.9070025, pattern:"pocha", pop:1.35},
+  {name:"초당할머니순두부",     cat:"초당순두부",          lat:37.7904190, lng:128.9154754, pattern:"meal",  pop:1.2},
+  {name:"동화가든 본점",        cat:"짬뽕순두부",          lat:37.7911718, lng:128.9146287, pattern:"meal",  pop:1.4},
+  {name:"큰기와집순두부",       cat:"초당순두부",          lat:37.7922935, lng:128.9138019, pattern:"meal",  pop:1.15},
+  {name:"토담순두부",           cat:"순두부백반",          lat:37.7910714, lng:128.9104696, pattern:"meal",  pop:1.05},
+  {name:"카페 툇마루",          cat:"카페 · 흑임자라떼",    lat:37.7928391, lng:128.9145879, pattern:"cafe",  pop:1.3},
+  {name:"순두부젤라또 1호점",   cat:"디저트 · 초당동",      lat:37.7916588, lng:128.9154558, pattern:"cafe",  pop:1.2},
+  {name:"테라로사 커피공장",    cat:"카페 · 구정면",        lat:37.6961635, lng:128.8923885, pattern:"cafe",  pop:1.15},
+  {name:"보헤미안 박이추커피",  cat:"카페 · 연곡",          lat:37.8646243, lng:128.8424910, pattern:"cafe",  pop:1.1},
+  {name:"카페 산토리니",        cat:"오션뷰 카페",          lat:37.7707527, lng:128.9500998, pattern:"cafe",  pop:1.2},
+  {name:"만동빵집",             cat:"마늘빵 · 어니언베이글", lat:37.7551432, lng:128.8994671, pattern:"bakery",pop:1.25},
+  {name:"강릉중앙시장",         cat:"전통시장 · 먹거리",    lat:37.7539833, lng:128.8985663, pattern:"market",pop:1.35},
+  {name:"중앙시장 닭강정골목",  cat:"닭강정 · 먹자골목",    lat:37.7538519, lng:128.8992426, pattern:"market",pop:1.25},
+  {name:"월화거리",             cat:"먹거리 · 야시장 거리", lat:37.7534233, lng:128.9001850, pattern:"market",pop:1.1},
+  {name:"교동반점",             cat:"교동짬뽕 원조",        lat:37.7583510, lng:128.8930428, pattern:"meal",  pop:1.35},
+  {name:"강릉감자옹심이 본점",  cat:"감자옹심이 · 메밀",    lat:37.7564341, lng:128.8948752, pattern:"meal",  pop:1.1},
+  {name:"형제칼국수",           cat:"장칼국수",            lat:37.7578859, lng:128.8930168, pattern:"meal",  pop:1.1},
+  {name:"삼교리동치미막국수",   cat:"막국수 · 구정면 본점", lat:37.7213350, lng:128.8821719, pattern:"meal",  pop:1.0},
+  {name:"해성횟집",             cat:"삼숙이탕 · 물회",      lat:37.7705747, lng:128.9508553, pattern:"meal",  pop:1.05},
+  {name:"오봉집 물회",          cat:"해물칼국수 · 물회",    lat:37.8019810, lng:128.9107690, pattern:"meal",  pop:1.05},
+  {name:"경포호 주변 횟집거리", cat:"회 · 킹크랩",         lat:37.8012929, lng:128.9115102, pattern:"meal",  pop:0.95},
+  {name:"안목해변 커피거리",    cat:"카페거리",            lat:37.7723486, lng:128.9476577, pattern:"cafe",  pop:1.25},
+  {name:"강문해변 카페거리",    cat:"오션뷰 카페거리",      lat:37.7975000, lng:128.9295000, pattern:"cafe",  pop:1.15},
+  {name:"버드나무브루어리",     cat:"수제맥주 · 펍",        lat:37.7482296, lng:128.8843596, pattern:"pub",   pop:1.0},
+];
+
+const PROFILES = {
+  meal:  [2,1,1,1,1,2,4,8,15,25,45,80,95,70,40,30,35,55,85,90,60,30,12,5],
+  cafe:  [1,1,1,1,1,1,2,5,15,30,45,55,65,80,90,85,75,60,50,40,30,20,10,4],
+  pocha: [15,8,3,1,1,1,1,2,4,6,10,25,35,25,20,25,35,55,80,95,98,90,70,40],
+  pub:   [20,10,4,1,1,1,1,1,2,3,5,10,20,15,12,15,25,45,70,90,95,92,75,45],
+  market:[1,1,1,1,1,2,5,15,30,50,70,85,90,80,70,65,60,55,45,30,15,8,3,1],
+  bakery:[1,1,1,1,1,2,5,20,40,60,75,85,80,70,75,80,70,55,40,25,12,5,2,1],
+};
+function hashJitter(name,hour,day){let h=0;const s=name+hour+day;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return (h%21)-10;}
+
+let LIVE={}, DATA_MODE="demo";
+const dayNames=["sun","mon","tue","wed","thu","fri","sat"];
+function getCongestion(place,hour,isWeekend,day){
+  const live=LIVE[place.name];const nowH=new Date().getHours();const dow=dayNames[new Date().getDay()];
+  if(live){
+    if(liveMode&&hour===nowH&&live.current!=null) return clampV(live.current);
+    if(live.weekly&&live.weekly[dow]){let v=live.weekly[dow][hour];if(live.footfall!=null)v=v*0.8+live.footfall*0.2;return clampV(v);}
+  }
+  const base=PROFILES[place.pattern][hour];const weekendBoost=isWeekend?1.28:1.0;
+  return clampV(base*place.pop*weekendBoost+hashJitter(place.name,hour,day));
+}
+function clampV(v){return Math.max(0,Math.min(100,Math.round(v)));}
+function levelInfo(v){
+  if(v<=35)return{label:"여유",color:"#1F9D6B",cls:"free",desc:"바로 입장 가능해요",wait:"대기 거의 없음"};
+  if(v<=65)return{label:"보통",color:"#F0A93B",cls:"normal",desc:"자리가 조금 있어요",wait:"예상 대기 약 10~20분"};
+  if(v<=85)return{label:"혼잡",color:"#E5484D",cls:"busy",desc:"사람이 많아요",wait:"예상 대기 약 30~50분"};
+  return{label:"매우 혼잡",color:"#B3202C",cls:"verybusy",desc:"피크 타임이에요",wait:"예상 대기 1시간 이상"};
+}
+
+/* ═══════════ 지도 + 타일 자동 폴백 ═══════════ */
+const map=L.map('map',{
+  zoomControl:false,
+  scrollWheelZoom:true, doubleClickZoom:true, touchZoom:true, boxZoom:true, keyboard:true,
+  maxZoom:19, minZoom:9,
+}).setView([37.774,128.905],13);
+L.control.zoom({position:'bottomright'}).addTo(map);
+
+/* crossOrigin 옵션은 절대 넣지 않는다 — 일부 타일 서버가 CORS 헤더를 안 줘서
+   이 옵션이 있으면 확대해서 새 타일을 요청할 때 전부 막혀버린다. */
+const PROVIDERS=[
+  {name:"OSM",   url:"https://tile.openstreetmap.org/{z}/{x}/{y}.png"},
+  {name:"CARTO", url:"https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"},
+  {name:"Esri",  url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"},
+  {name:"Wiki",  url:"https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png"},
+];
+let curLayer=null, tileOK=false, provErr=0;
+function useProvider(i){
+  if(i>=PROVIDERS.length){ if(!tileOK) document.getElementById('tilewarn').classList.add('show'); return; }
+  if(curLayer) map.removeLayer(curLayer);
+  provErr=0;
+  curLayer=L.tileLayer(PROVIDERS[i].url,{maxZoom:19,attribution:'&copy; '+PROVIDERS[i].name});
+  curLayer.on('load',()=>{tileOK=true;document.getElementById('tilewarn').classList.remove('show');});
+  curLayer.on('tileerror',()=>{provErr++;if(provErr>=8&&!tileOK){useProvider(i+1);}});
+  curLayer.addTo(map);
+}
+useProvider(0);
+function fixSize(){map.invalidateSize();}
+setTimeout(fixSize,300);
+setTimeout(()=>{if(!tileOK)document.getElementById('tilewarn').classList.add('show');},7000);
+window.addEventListener('resize',fixSize);
+new ResizeObserver(fixSize).observe(document.getElementById('mapCard'));
+
+const now=new Date();
+let viewHour=now.getHours();let liveMode=true;
+const isWeekend=[0,6].includes(now.getDay());const dayKey=now.toISOString().slice(0,10);
+document.getElementById('dayHint').textContent=isWeekend?'주말 패턴':'평일 패턴';
+function tickClock(){const n=new Date();document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+' 실시간';}
+tickClock();setInterval(tickClock,30000);
+
+/* ═══════════ 마커 ═══════════ */
+const markers=[];let selectedName=null;
+function showLabels(){return map.getZoom()>=15;}
+function makeIcon(place,hour){
+  const v=getCongestion(place,hour,isWeekend,dayKey);const li=levelInfo(v);
+  const sel=place.name===selectedName;const hide=(!showLabels()&&!sel)?'hideLabel':'';
+  return L.divIcon({className:'',iconSize:[0,0],html:
+    '<div class="pin '+li.cls+' '+hide+' '+(sel?'sel':'')+'"><div class="dotpin" style="background:'+li.color+'"></div><div class="label" style="border-color:'+li.color+'">'+place.name+'</div></div>'});
+}
+PLACES.forEach(p=>{
+  const m=L.marker([p.lat,p.lng],{icon:makeIcon(p,viewHour)}).addTo(map);
+  m.on('click',()=>{selectedName=p.name;openSheet(p);refreshMarkers();});
+  markers.push({place:p,marker:m});
+});
+
+/* ═══════════ 지역 단위 혼잡도 원 (코로나맵 스타일) ═══════════ */
+const ZONES=[
+  {name:"초당동 순두부마을", lat:37.79157, lng:128.91407, radius:550,
+   members:["초당할머니순두부","동화가든 본점","큰기와집순두부","토담순두부","카페 툇마루","순두부젤라또 1호점"]},
+  {name:"강릉 원도심 (중앙시장·명주동)", lat:37.7547, lng:128.8953, radius:1500,
+   members:["강릉중앙시장","중앙시장 닭강정골목","월화거리","강릉감자옹심이 본점","형제칼국수","교동반점","만동빵집","버드나무브루어리"]},
+  {name:"안목해변 일원", lat:37.7712, lng:128.9495, radius:500,
+   members:["안목해변 커피거리","해성횟집","카페 산토리니"]},
+  {name:"강문해변 카페거리", lat:37.7975, lng:128.9295, radius:400,
+   members:["강문해변 카페거리"]},
+  {name:"경포호 일원", lat:37.8016, lng:128.9111, radius:600,
+   members:["경포호 주변 횟집거리","오봉집 물회"]},
+  {name:"구정면 테라로사", lat:37.6962, lng:128.8924, radius:500,
+   members:["테라로사 커피공장"]},
+  {name:"연곡 보헤미안", lat:37.8646, lng:128.8425, radius:500,
+   members:["보헤미안 박이추커피"]},
+  {name:"삼교리 막국수", lat:37.7213, lng:128.8822, radius:500,
+   members:["삼교리동치미막국수"]},
+  {name:"엄지네포장마차 일원", lat:37.7663, lng:128.9070, radius:500,
+   members:["엄지네포장마차 본점"]},
+];
+function zoneAvg(zone,hour){
+  const vals=zone.members.map(n=>{const p=PLACES.find(x=>x.name===n);return p?getCongestion(p,hour,isWeekend,dayKey):0;});
+  return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):0;
+}
+function zoneStyle(v,zoomLv){
+  const li=levelInfo(v);
+  let fillOpacity=0.14+(v/100)*0.32, strokeOpacity=0.55;
+  if(zoomLv>=16){fillOpacity*=0.3;strokeOpacity*=0.4;}
+  return{color:li.color,weight:1.5,opacity:strokeOpacity,fillColor:li.color,fillOpacity};
+}
+const zoneCircles=ZONES.map(z=>{
+  const v=zoneAvg(z,viewHour);
+  const c=L.circle([z.lat,z.lng],{radius:z.radius,...zoneStyle(v,map.getZoom())}).addTo(map);
+  c.on('click',()=>{
+    const cv=zoneAvg(z,viewHour);const cli=levelInfo(cv);
+    map.flyToBounds(c.getBounds(),{duration:.6,maxZoom:15});
+    toast(z.name+' · 평균 혼잡도 '+cv+' · '+cli.label);
+  });
+  return{zone:z,circle:c};
+});
+function refreshZones(){
+  const zoomLv=map.getZoom();
+  zoneCircles.forEach(({zone,circle})=>{circle.setStyle(zoneStyle(zoneAvg(zone,viewHour),zoomLv));});
+}
+function refreshMarkers(){markers.forEach(({place,marker})=>marker.setIcon(makeIcon(place,viewHour)));refreshZones();}
+map.on('zoomend',refreshMarkers);
+
+/* ═══════════ 내 위치 ═══════════ */
+let userMarker=null,userCircle=null,userLatLng=null;
+const toastEl=document.getElementById('toast');let toastT=null;
+function toast(msg){toastEl.textContent=msg;toastEl.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>toastEl.classList.remove('show'),2600);}
+function haversine(a,b,c,d){const R=6371,r=Math.PI/180;const dLat=(c-a)*r,dLng=(d-b)*r;const x=Math.sin(dLat/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dLng/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+document.getElementById('locateBtn').addEventListener('click',()=>{
+  if(!navigator.geolocation){toast('이 브라우저는 위치를 지원하지 않아요');return;}
+  toast('내 위치 찾는 중…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const lat=pos.coords.latitude, lng=pos.coords.longitude, accuracy=pos.coords.accuracy;
+    userLatLng=[lat,lng];
+    if(userMarker){userMarker.setLatLng(userLatLng);userCircle.setLatLng(userLatLng).setRadius(accuracy);}
+    else{
+      userMarker=L.marker(userLatLng,{icon:L.divIcon({className:'',iconSize:[0,0],html:'<div class="userdot"></div>'}),zIndexOffset:1000}).addTo(map);
+      userCircle=L.circle(userLatLng,{radius:accuracy,color:'#2D6E8E',fillColor:'#2D6E8E',fillOpacity:.12,weight:1}).addTo(map);
+    }
+    document.getElementById('locateBtn').classList.add('on');
+    map.flyTo(userLatLng,15,{duration:.8});
+    let best=null,bd=1e9;PLACES.forEach(p=>{const d=haversine(lat,lng,p.lat,p.lng);if(d<bd){bd=d;best=p;}});
+    toast(best?('내 위치 확인 · 가장 가까운 맛집은 '+best.name+' ('+(bd<1?Math.round(bd*1000)+'m':bd.toFixed(1)+'km')+')'):'내 위치를 찾았어요');
+    if(currentPlace)renderSheet();
+  },err=>{
+    toast(err.code===1?'위치 권한이 거부됐어요 (설정에서 허용)':'위치를 찾지 못했어요');
+  },{enableHighAccuracy:true,timeout:9000,maximumAge:30000});
+});
+
+/* ═══════════ 검색 ═══════════ */
+const searchInput=document.getElementById('search');const resultsBox=document.getElementById('results');
+searchInput.addEventListener('input',()=>{
+  const q=searchInput.value.trim();if(!q){resultsBox.classList.remove('show');return;}
+  const hits=PLACES.filter(p=>p.name.includes(q)||p.cat.includes(q));
+  resultsBox.innerHTML=hits.length?hits.map(p=>{const li=levelInfo(getCongestion(p,viewHour,isWeekend,dayKey));return '<div class="result-item" data-name="'+p.name+'"><div><div class="r-name">'+p.name+'</div><div class="r-cat">'+p.cat+'</div></div><span style="font-size:.75rem;font-weight:800;color:'+li.color+'">'+li.label+'</span></div>';}).join(''):'<div class="result-empty">"'+q+'" 검색 결과가 없어요</div>';
+  resultsBox.classList.add('show');
+});
+resultsBox.addEventListener('click',e=>{
+  const item=e.target.closest('.result-item');if(!item)return;
+  const p=PLACES.find(x=>x.name===item.dataset.name);
+  resultsBox.classList.remove('show');searchInput.value=p.name;searchInput.blur();selectedName=p.name;
+  map.flyTo([p.lat,p.lng],16,{duration:.8});setTimeout(()=>{openSheet(p);refreshMarkers();},500);
+});
+document.addEventListener('click',e=>{if(!e.target.closest('.searchwrap'))resultsBox.classList.remove('show');});
+
+/* ═══════════ 하단 시트 ═══════════ */
+const sheet=document.getElementById('sheet');const slider=document.getElementById('tSlider');let currentPlace=null;
+function openSheet(p){currentPlace=p;liveMode=true;viewHour=new Date().getHours();slider.value=Math.min(23,Math.max(9,viewHour));renderSheet();sheet.classList.add('open');}
+function closeSheet(){sheet.classList.remove('open');}
+function renderSheet(){
+  const p=currentPlace;if(!p)return;
+  const v=getCongestion(p,viewHour,isWeekend,dayKey);const li=levelInfo(v);const live=LIVE[p.name];
+  document.getElementById('sName').textContent=p.name;
+  document.getElementById('sCat').textContent=p.cat;
+  const distEl=document.getElementById('sDist');
+  if(userLatLng){const d=haversine(userLatLng[0],userLatLng[1],p.lat,p.lng);distEl.textContent='내 위치에서 '+(d<1?Math.round(d*1000)+'m':d.toFixed(1)+'km');}
+  else distEl.textContent='';
+  document.getElementById('sLevel').textContent=li.label;
+  document.getElementById('sDesc').textContent=li.desc;
+  document.getElementById('sPct').textContent=v;
+  document.getElementById('sStatus').style.background=li.color;
+  let srcTxt="";
+  if(live&&liveMode&&live.current!=null&&viewHour===new Date().getHours())srcTxt='<b>구글 실시간</b> 인구 데이터';
+  else if(live&&live.weekly)srcTxt='<b>실측 방문패턴</b> 기반'+(live.footfall!=null?' · 공공 유동인구 보정':'');
+  else srcTxt='업종 방문패턴 <b>추정치</b> (실데이터 미연결)';
+  document.getElementById('sSrc').innerHTML=srcTxt;
+  document.getElementById('sWait').textContent=(liveMode?"지금 ":viewHour+"시 기준 ")+li.wait+" · 혼잡도 "+v+"/100";
+  document.getElementById('tOut').textContent=liveMode?"지금":viewHour+":00";
+  const chart=document.getElementById('chart'),labels=document.getElementById('hourLabels');let bars="",labs="";
+  for(let h=9;h<=23;h++){const hv=getCongestion(p,h,isWeekend,dayKey),hli=levelInfo(hv);bars+='<div class="bar '+(h===viewHour?'now':'')+'" style="height:'+Math.max(4,hv)+'%;background:'+hli.color+'" data-h="'+h+'"></div>';labs+='<span>'+(h%3===0?h:'')+'</span>';}
+  chart.innerHTML=bars;labels.innerHTML=labs;
+  chart.querySelectorAll('.bar').forEach(b=>b.addEventListener('click',()=>{viewHour=+b.dataset.h;liveMode=false;slider.value=viewHour;renderSheet();refreshMarkers();}));
+}
+slider.addEventListener('input',()=>{viewHour=+slider.value;liveMode=(viewHour===new Date().getHours());renderSheet();refreshMarkers();});
+function resetNow(){viewHour=new Date().getHours();liveMode=true;slider.value=Math.min(23,Math.max(9,viewHour));renderSheet();refreshMarkers();}
+setInterval(()=>{if(liveMode){viewHour=new Date().getHours();refreshMarkers();if(sheet.classList.contains('open'))renderSheet();}},60000);
+
+/* ═══════════ 실데이터 로드 ═══════════ */
+async function loadRealData(){
+  try{
+    const res=await fetch('./congestion_data.json',{cache:'no-store'});
+    if(!res.ok)throw new Error('no file');
+    const json=await res.json();
+    (json.places||[]).forEach(row=>{
+      LIVE[row.name]={current:row.current!=null?row.current:null,weekly:row.weekly||null,footfall:row.footfall!=null?row.footfall:null,source:row.source,updated:row.updated};
+      const P=PLACES.find(p=>p.name===row.name);if(P&&row.lat&&row.lng){P.lat=row.lat;P.lng=row.lng;}
+    });
+    DATA_MODE="real";
+    document.getElementById('srcBadge').textContent="실시간";document.getElementById('srcBadge').className="src real";
+    document.getElementById('datanote').innerHTML='구글 인구 + 공공 유동인구 연동 · <b>'+(json.generated?new Date(json.generated).toLocaleString('ko-KR'):'')+'</b>';
+    markers.forEach(({place,marker})=>marker.setLatLng([place.lat,place.lng]));refreshMarkers();
+  }catch(e){
+    DATA_MODE="demo";
+    document.getElementById('srcBadge').textContent="추정";document.getElementById('srcBadge').className="src demo";
+    document.getElementById('datanote').innerHTML="혼잡도는 업종별 방문 패턴 기반 <b>추정치</b> (데모)";
+  }
+}
+loadRealData();setInterval(loadRealData,120000);
+
+/* ═══════════ 오늘 방문자수 (한국시간 0시~23시59분 기준으로 자동 리셋) ═══════════
+   무료 카운터 서비스(CounterAPI)를 쓴다. 이런 무료 서비스는 가끔 불안정할 수 있어서,
+   실패하면 그냥 조용히 숨긴다 (페이지가 깨지거나 이상한 값이 보이지 않도록). */
+const COUNTER_NAMESPACE = "gangneung-foodmap-sungbok"; // 다른 이름으로 바꿔도 됨
+function kstDateKey(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul'}).format(new Date()).replace(/-/g,'');
+}
+async function loadVisitorCount(){
+  const badge=document.getElementById('visitorBadge');
+  const textEl=document.getElementById('visitorText');
+  try{
+    const key='visits-'+kstDateKey();
+    const res=await fetch('https://api.counterapi.dev/v1/'+COUNTER_NAMESPACE+'/'+key+'/up');
+    if(!res.ok) throw new Error('counter api error');
+    const data=await res.json();
+    const n=(data && (data.count!=null?data.count:data.value));
+    if(n==null) throw new Error('no count field');
+    textEl.textContent='오늘 방문자 '+Number(n).toLocaleString('ko-KR')+'명';
+    badge.classList.add('show');
+  }catch(e){
+    badge.classList.remove('show'); // 실패 시 조용히 숨김
+  }
+}
+loadVisitorCount();
+
+/* ═══════════ 강릉 축제·행사 소식 (강릉관광개발공사 공식 게시판 자동 수집) ═══════════ */
+async function loadFestivalNews(){
+  const listEl=document.getElementById('newsList');
+  try{
+    const res=await fetch('./festival_news.json',{cache:'no-store'});
+    if(!res.ok) throw new Error('no file');
+    const json=await res.json();
+    const items=(json.items||[]).slice(0,6);
+    if(!items.length) throw new Error('empty');
+    listEl.innerHTML=items.map(it=>
+      '<a class="news-item" href="'+it.url+'" target="_blank" rel="noopener">'+
+      '<span class="n-title">'+it.title+'</span>'+
+      '<span class="n-date">'+it.date+'</span></a>'
+    ).join('');
+  }catch(e){
+    listEl.innerHTML='<div class="news-empty">아직 소식이 연동되지 않았어요. '+
+      '<a href="https://www.gtdc.or.kr/pub/bbsevent.do" target="_blank" rel="noopener">강릉관광개발공사 행사안내 바로가기</a></div>';
+  }
+}
+loadFestivalNews();setInterval(loadFestivalNews,300000);
+</script>
+</body>
+</html>
