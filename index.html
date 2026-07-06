@@ -4,7 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="naver-site-verification" content="659a7a1d50f556a1faa74d63be3aa3a596242c6e" />
-<title>강릉 맛집지도 — 실시간 혼잡도</title>
+<title>강릉맛집 지도 | 강릉 맛집지도 — 실시간 혼잡도·카페·소품샵·축제소식</title>
+<meta name="description" content="강릉맛집 실시간 혼잡도 지도. 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 한눈에 보고, 강릉 축제·행사 소식도 자동으로 확인하세요.">
+<link rel="canonical" href="https://gangneungmatzip.co.kr/">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="강릉맛집 지도 — 실시간 혼잡도·카페·소품샵">
+<meta property="og:description" content="강릉 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 실시간 혼잡도로 한눈에. 강릉 축제·행사 소식도 자동 업데이트.">
+<meta property="og:url" content="https://gangneungmatzip.co.kr/">
+<meta property="og:image" content="https://gangneungmatzip.co.kr/og-image.png">
+<meta property="og:locale" content="ko_KR">
+
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/favicon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
@@ -77,6 +90,15 @@
   .news-item .n-date{flex:none;font-size:.72rem;color:#8fa3b3;}
   .news-empty{font-size:.8rem;color:#8fa3b3;padding:6px 4px;}
   .news-empty a{color:var(--sea);font-weight:700;}
+
+  .seo-list{margin-top:14px;background:#fff;border-radius:16px;box-shadow:0 4px 16px rgba(19,41,61,.1);padding:16px 18px;}
+  .seo-list summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--ink);}
+  .seo-intro{font-size:.78rem;color:#7a8fa0;margin:10px 0 16px;line-height:1.6;}
+  .seo-zone{margin-bottom:14px;}
+  .seo-zone h3{font-size:.82rem;color:var(--sea);margin-bottom:6px;}
+  .seo-zone ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:0;}
+  .seo-zone li{font-size:.76rem;color:#5d7284;}
+  .seo-zone li span{color:#a9bac6;}
 
   .legend{position:absolute;top:12px;right:12px;z-index:900;background:rgba(255,255,255,.94);border-radius:12px;padding:10px 12px;box-shadow:0 2px 10px rgba(19,41,61,.15);font-size:.72rem;line-height:1.9;}
   .legend .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;}
@@ -258,6 +280,14 @@
     <div class="news-list" id="newsList">
       <div class="news-empty">소식을 불러오는 중입니다…</div>
     </div>
+  </section>
+
+  <section class="seo-list">
+    <details>
+      <summary>강릉맛집 전체 목록 보기 (지역별 10개 구역)</summary>
+      <p class="seo-intro">강릉맛집 지도에 등록된 초당동 순두부거리, 강릉중앙시장, 안목·강문 카페거리, 경포호, 명주동 소품샵 등 강릉 전 지역 맛집·카페·베이커리·소품샵 목록입니다.</p>
+      <div class="seo-zone"><h3>초당동 순두부마을</h3><ul><li>초당할머니순두부 <span>· 초당순두부</span></li><li>동화가든 본점 <span>· 짬뽕순두부</span></li><li>큰기와집순두부 <span>· 초당순두부</span></li><li>토담순두부 <span>· 순두부백반</span></li><li>카페 툇마루 <span>· 카페 · 흑임자라떼</span></li><li>순두부젤라또 1호점 <span>· 디저트 · 초당동</span></li><li>메종고니 <span>· 소품샵 · 디자인굿즈</span></li><li>강릉물회 강릉횟집 천둥수산 강문해변점 <span>· 물회 · 활어회</span></li></ul></div><div class="seo-zone"><h3>강릉 원도심 (중앙시장·명주동)</h3><ul><li>강릉중앙시장 <span>· 전통시장 · 먹거리</span></li><li>중앙시장 닭강정골목 <span>· 닭강정 · 먹자골목</span></li><li>월화거리 <span>· 먹거리 · 야시장 거리</span></li><li>강릉감자옹심이 본점 <span>· 감자옹심이 · 메밀</span></li><li>형제칼국수 <span>· 장칼국수</span></li><li>교동반점 <span>· 교동짬뽕 원조</span></li><li>만동빵집 <span>· 마늘빵 · 어니언베이글</span></li><li>버드나무브루어리 <span>· 수제맥주 · 펍</span></li><li>봉봉방앗간 <span>· 카페 · 로스터리</span></li><li>오버웨잇 강릉본점 <span>· 에그타르트 베이커리</span></li><li>레드망치 <span>· 소품샵 · 리빙&카페</span></li><li>안뇬소품샵 <span>· 소품샵</span></li><li>베이커리 가루 <span>· 베이커리</span></li></ul></div><div class="seo-zone"><h3>안목해변 일원</h3><ul><li>안목해변 커피거리 <span>· 카페거리</span></li><li>해성횟집 <span>· 삼숙이탕 · 물회</span></li><li>카페 산토리니 <span>· 오션뷰 카페</span></li></ul></div><div class="seo-zone"><h3>강문해변 카페거리</h3><ul><li>강문해변 카페거리 <span>· 오션뷰 카페거리</span></li></ul></div><div class="seo-zone"><h3>경포호 일원</h3><ul><li>경포호 주변 횟집거리 <span>· 회 · 킹크랩</span></li><li>오봉집 물회 <span>· 해물칼국수 · 물회</span></li></ul></div><div class="seo-zone"><h3>구정면 테라로사</h3><ul><li>테라로사 커피공장 <span>· 카페 · 구정면</span></li></ul></div><div class="seo-zone"><h3>연곡 보헤미안</h3><ul><li>보헤미안 박이추커피 <span>· 카페 · 연곡</span></li></ul></div><div class="seo-zone"><h3>삼교리 막국수</h3><ul><li>삼교리동치미막국수 <span>· 막국수 · 구정면 본점</span></li></ul></div><div class="seo-zone"><h3>명주동 카페·포장마차 거리</h3><ul><li>엄지네포장마차 본점 <span>· 꼬막비빔밥 · 육사시미</span></li><li>강릉 카페 체크이스트 <span>· 베이커리카페 · 프렌치파이</span></li></ul></div><div class="seo-zone"><h3>강릉빵다방 일원</h3><ul><li>강릉빵다방 <span>· 베이커리 · 인절미빵</span></li></ul></div>
+    </details>
   </section>
 </div>
 
