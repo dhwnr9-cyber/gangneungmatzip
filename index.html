@@ -4,13 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="naver-site-verification" content="659a7a1d50f556a1faa74d63be3aa3a596242c6e" />
-<title>강릉맛집 지도 | 강릉 맛집지도 — 실시간 혼잡도·카페·소품샵·축제소식</title>
-<meta name="description" content="강릉맛집 실시간 혼잡도 지도. 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 한눈에 보고, 강릉 축제·행사 소식도 자동으로 확인하세요.">
+<!-- 보안(CSP): 스크립트는 우리 페이지와 아래 두 CDN에서만 실행 허용.
+     외부 악성 스크립트 로드를 브라우저 차원에서 차단하는 안전벨트.
+     혹시 지도나 기능이 갑자기 안 뜨면 이 meta 한 줄을 지우고 원인 확인. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com; img-src https: data: blob:; connect-src 'self' https:; worker-src blob:; child-src blob:; font-src https: data:; object-src 'none'; base-uri 'self'; form-action 'none';">
+<title>강릉맛집 지도 | 강릉 맛집지도 — 요일·시간대별 예상 혼잡도·카페·소품샵·축제소식</title>
+<meta name="description" content="강릉맛집 요일·시간대별 예상 혼잡도 지도. 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 한눈에 보고, 강릉 축제·행사 소식도 자동으로 확인하세요.">
 <link rel="canonical" href="https://gangneungmatzip.co.kr/">
 
 <meta property="og:type" content="website">
-<meta property="og:title" content="강릉맛집 지도 — 실시간 혼잡도·카페·소품샵">
-<meta property="og:description" content="강릉 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 실시간 혼잡도로 한눈에. 강릉 축제·행사 소식도 자동 업데이트.">
+<meta property="og:title" content="강릉맛집 지도 — 요일·시간대별 예상 혼잡도·카페·소품샵">
+<meta property="og:description" content="강릉 초당동 순두부, 중앙시장, 안목·강문 카페거리, 소품샵까지 요일·시간대별 예상 혼잡도로 한눈에. 강릉 축제·행사 소식도 자동 업데이트.">
 <meta property="og:url" content="https://gangneungmatzip.co.kr/">
 <meta property="og:image" content="https://gangneungmatzip.co.kr/og-image.png">
 <meta property="og:locale" content="ko_KR">
@@ -40,7 +44,7 @@
   .brand h1{font-size:1.3rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);}
   .brand .live{font-size:.7rem;font-weight:700;color:#fff;background:var(--sea);padding:4px 8px;border-radius:8px;}
   .brand .src{font-size:.62rem;font-weight:700;color:#fff;padding:4px 7px;border-radius:8px;}
-  .src.real{background:#1F9D6B;} .src.demo{background:#8fa3b3;}
+  .src.real{background:#1F9D6B;} .src.demo{background:#8fa3b3;} .src.info{background:var(--sea);}
   .visitor-badge{display:none;align-items:center;gap:6px;width:fit-content;font-size:.72rem;font-weight:700;color:var(--sea);background:#eaf3f7;padding:5px 12px;border-radius:20px;margin-bottom:10px;}
   .visitor-badge.show{display:inline-flex;}
   .visitor-badge .vdot{width:6px;height:6px;border-radius:50%;background:#1F9D6B;flex:none;}
@@ -187,7 +191,7 @@
     <div class="brand">
       <h1>강릉 맛집지도</h1>
       <span class="live" id="clock">·</span>
-      <span class="src demo" id="srcBadge">추정</span>
+      <span class="src info" id="srcBadge">요일·시간대 예상</span>
     </div>
     <div class="searchwrap">
       <div class="searchbox">
@@ -244,7 +248,7 @@
         <span style="font-size:.75rem;color:#8fa3b3">앱 안의 미리보기 창은 지도 타일을 차단할 수 있어요.</span><br>
         <button onclick="document.getElementById('tilewarn').classList.remove('show')">닫기</button>
       </div>
-      <div class="datanote" id="datanote">데이터 불러오는 중…</div>
+      <div class="datanote" id="datanote">혼잡도는 요일·시간대별 <b>예상치</b>입니다</div>
       <div class="toast" id="toast"></div>
     </div>
 
@@ -320,6 +324,15 @@
      마늘빵·어니언베이글 명물인 만동빵집으로 교체)
    - 원조교동짬뽕 → 교동반점 (그 정확한 상호는 못 찾았고, 교동짬뽕의
      원조 격인 교동반점 명주동 본점 좌표를 사용. 다른 곳이면 알려주세요) */
+
+/* ═══ 보안: HTML 이스케이프 + URL 검증 헬퍼 ═══
+   외부에서 온 텍스트(긁어온 축제 제목, 사용자 검색어 등)를 화면에 넣기 전에
+   반드시 이 함수를 거친다. <script> 같은 태그가 글자 그대로 보이게만 하고
+   절대 실행되지 않게 만든다(XSS 방어). */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+/* 링크 주소는 http/https로 시작할 때만 통과. javascript: 같은 위험한 스킴 차단 */
+function safeUrl(u){u=String(u==null?'':u).trim();return /^https?:\/\//i.test(u)?u:'#';}
+
 const PLACES = [
   {name:"엄지네포장마차 본점", cat:"꼬막비빔밥 · 육사시미", lat:37.7663141, lng:128.9070025, pattern:"pocha", pop:1.35},
   {name:"초당할머니순두부",     cat:"초당순두부",          lat:37.7904190, lng:128.9154754, pattern:"meal",  pop:1.2},
@@ -369,14 +382,8 @@ const PROFILES = {
 };
 function hashJitter(name,hour,day){let h=0;const s=name+hour+day;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return (h%21)-10;}
 
-let LIVE={}, DATA_MODE="demo";
-const dayNames=["sun","mon","tue","wed","thu","fri","sat"];
 function getCongestion(place,hour,isWeekend,day){
-  const live=LIVE[place.name];const nowH=new Date().getHours();const dow=dayNames[new Date().getDay()];
-  if(live){
-    if(liveMode&&hour===nowH&&live.current!=null) return clampV(live.current);
-    if(live.weekly&&live.weekly[dow]){let v=live.weekly[dow][hour];if(live.footfall!=null)v=v*0.8+live.footfall*0.2;return clampV(v);}
-  }
+  // 요일·시간대별 예상 혼잡도: 업종 프로필 × 가게 인기도 × 주말 가중치 + 소폭 변동
   const base=PROFILES[place.pattern][hour];const weekendBoost=isWeekend?1.28:1.0;
   return clampV(base*place.pop*weekendBoost+hashJitter(place.name,hour,day));
 }
@@ -458,7 +465,7 @@ const now=new Date();
 let viewHour=now.getHours();let liveMode=true;
 const isWeekend=[0,6].includes(now.getDay());const dayKey=now.toISOString().slice(0,10);
 document.getElementById('dayHint').textContent=isWeekend?'주말 패턴':'평일 패턴';
-function tickClock(){const n=new Date();document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+' 실시간';}
+function tickClock(){const n=new Date();document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0')+' 현재';}
 tickClock();setInterval(tickClock,30000);
 
 /* ═══════════ 마커 ═══════════ */
@@ -557,7 +564,7 @@ const searchInput=document.getElementById('search');const resultsBox=document.ge
 searchInput.addEventListener('input',()=>{
   const q=searchInput.value.trim();if(!q){resultsBox.classList.remove('show');return;}
   const hits=PLACES.filter(p=>p.name.includes(q)||p.cat.includes(q));
-  resultsBox.innerHTML=hits.length?hits.map(p=>{const li=levelInfo(getCongestion(p,viewHour,isWeekend,dayKey));return '<div class="result-item" data-name="'+p.name+'"><div><div class="r-name">'+p.name+'</div><div class="r-cat">'+p.cat+'</div></div><span style="font-size:.75rem;font-weight:800;color:'+li.color+'">'+li.label+'</span></div>';}).join(''):'<div class="result-empty">"'+q+'" 검색 결과가 없어요</div>';
+  resultsBox.innerHTML=hits.length?hits.map(p=>{const li=levelInfo(getCongestion(p,viewHour,isWeekend,dayKey));return '<div class="result-item" data-name="'+p.name+'"><div><div class="r-name">'+p.name+'</div><div class="r-cat">'+p.cat+'</div></div><span style="font-size:.75rem;font-weight:800;color:'+li.color+'">'+li.label+'</span></div>';}).join(''):'<div class="result-empty">"'+esc(q)+'" 검색 결과가 없어요</div>';
   resultsBox.classList.add('show');
 });
 resultsBox.addEventListener('click',e=>{
@@ -574,7 +581,7 @@ function openSheet(p){currentPlace=p;liveMode=true;viewHour=new Date().getHours(
 function closeSheet(){sheet.classList.remove('open');}
 function renderSheet(){
   const p=currentPlace;if(!p)return;
-  const v=getCongestion(p,viewHour,isWeekend,dayKey);const li=levelInfo(v);const live=LIVE[p.name];
+  const v=getCongestion(p,viewHour,isWeekend,dayKey);const li=levelInfo(v);
   document.getElementById('sName').textContent=p.name;
   document.getElementById('sCat').textContent=p.cat;
   const distEl=document.getElementById('sDist');
@@ -585,11 +592,9 @@ function renderSheet(){
   document.getElementById('sPct').textContent=v;
   document.getElementById('sStatus').style.background=li.color;
   let srcTxt="";
-  if(live&&liveMode&&live.current!=null&&viewHour===new Date().getHours())srcTxt='<b>구글 실시간</b> 인구 데이터';
-  else if(live&&live.weekly)srcTxt='<b>실측 방문패턴</b> 기반'+(live.footfall!=null?' · 공공 유동인구 보정':'');
-  else srcTxt='업종 방문패턴 <b>추정치</b>';
+  srcTxt='업종·요일·시간대별 <b>예상 혼잡도</b> (실제와 다를 수 있어요)';
   document.getElementById('sSrc').innerHTML=srcTxt;
-  document.getElementById('sWait').textContent=(liveMode?"지금 ":viewHour+"시 기준 ")+li.wait+" · 혼잡도 "+v+"/100";
+  document.getElementById('sWait').textContent=(liveMode?"지금 시각 기준 ":viewHour+"시 기준 ")+li.wait+" · 예상 혼잡도 "+v+"/100";
   document.getElementById('tOut').textContent=liveMode?"지금":viewHour+":00";
   const chart=document.getElementById('chart'),labels=document.getElementById('hourLabels');let bars="",labs="";
   for(let h=9;h<=23;h++){const hv=getCongestion(p,h,isWeekend,dayKey),hli=levelInfo(hv);bars+='<div class="bar '+(h===viewHour?'now':'')+'" style="height:'+Math.max(4,hv)+'%;background:'+hli.color+'" data-h="'+h+'"></div>';labs+='<span>'+(h%3===0?h:'')+'</span>';}
@@ -600,27 +605,7 @@ slider.addEventListener('input',()=>{viewHour=+slider.value;liveMode=(viewHour==
 function resetNow(){viewHour=new Date().getHours();liveMode=true;slider.value=Math.min(23,Math.max(9,viewHour));renderSheet();refreshMarkers();}
 setInterval(()=>{if(liveMode){viewHour=new Date().getHours();refreshMarkers();if(sheet.classList.contains('open'))renderSheet();}},60000);
 
-/* ═══════════ 실데이터 로드 ═══════════ */
-async function loadRealData(){
-  try{
-    const res=await fetch('./congestion_data.json',{cache:'no-store'});
-    if(!res.ok)throw new Error('no file');
-    const json=await res.json();
-    (json.places||[]).forEach(row=>{
-      LIVE[row.name]={current:row.current!=null?row.current:null,weekly:row.weekly||null,footfall:row.footfall!=null?row.footfall:null,source:row.source,updated:row.updated};
-      const P=PLACES.find(p=>p.name===row.name);if(P&&row.lat&&row.lng){P.lat=row.lat;P.lng=row.lng;}
-    });
-    DATA_MODE="real";
-    document.getElementById('srcBadge').textContent="실시간";document.getElementById('srcBadge').className="src real";
-    document.getElementById('datanote').innerHTML='구글 인구 + 공공 유동인구 연동 · <b>'+(json.generated?new Date(json.generated).toLocaleString('ko-KR'):'')+'</b>';
-    markers.forEach(({place,marker})=>marker.setLatLng([place.lat,place.lng]));refreshMarkers();
-  }catch(e){
-    DATA_MODE="demo";
-    document.getElementById('srcBadge').textContent="추정";document.getElementById('srcBadge').className="src demo";
-    document.getElementById('datanote').innerHTML="혼잡도는 업종별 방문 패턴 기반 <b>추정치</b> (데모)";
-  }
-}
-loadRealData();setInterval(loadRealData,120000);
+/* (실시간 데이터 연동은 사용하지 않음 — 요일·시간대별 예상치로만 운영) */
 
 /* ═══════════ 오늘 방문자수 (한국시간 0시~23시59분 기준으로 자동 리셋) ═══════════
    무료 카운터 서비스(CounterAPI)를 쓴다. 이런 무료 서비스는 가끔 불안정할 수 있어서,
@@ -657,9 +642,9 @@ async function loadFestivalNews(){
     const items=(json.items||[]).slice(0,6);
     if(!items.length) throw new Error('empty');
     listEl.innerHTML=items.map(it=>
-      '<a class="news-item" href="'+it.url+'" target="_blank" rel="noopener">'+
-      '<span class="n-title">'+it.title+'</span>'+
-      '<span class="n-date">'+it.date+'</span></a>'
+      '<a class="news-item" href="'+esc(safeUrl(it.url))+'" target="_blank" rel="noopener">'+
+      '<span class="n-title">'+esc(it.title)+'</span>'+
+      '<span class="n-date">'+esc(it.date)+'</span></a>'
     ).join('');
   }catch(e){
     listEl.innerHTML='<div class="news-empty">아직 소식이 연동되지 않았어요. '+
