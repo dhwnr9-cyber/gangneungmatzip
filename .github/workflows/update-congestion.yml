@@ -1,10 +1,12 @@
-name: 혼잡도·축제소식 자동 갱신
+name: 축제·행사 소식 자동 갱신
 
+# 언제 실행할지
 on:
   schedule:
-    - cron: "*/10 * * * *"
-  workflow_dispatch:
+    - cron: "*/10 * * * *"   # 10분마다 (UTC 기준. GitHub 무료 요금제에서 가능한 최소 간격은 사실상 5분이지만 여유있게 10분)
+  workflow_dispatch:          # "Actions" 탭에서 수동으로도 실행 가능
 
+# 이 워크플로가 저장소에 파일을 커밋할 수 있게 권한 부여
 permissions:
   contents: write
 
@@ -27,15 +29,7 @@ jobs:
           python-version: "3.11"
 
       - name: 필요한 패키지 설치
-        run: |
-          pip install -r requirements.txt
-          pip install git+https://github.com/m-wrzr/populartimes
-
-      - name: 혼잡도 수집 실행
-        env:
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          PUBLIC_DATA_KEY: ${{ secrets.PUBLIC_DATA_KEY }}
-        run: python collect_congestion.py
+        run: pip install -r requirements.txt
 
       - name: 강릉 축제·행사 소식 수집 실행
         run: python collect_festival_news.py
@@ -44,7 +38,8 @@ jobs:
         run: |
           git config user.name "congestion-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add congestion_data.json festival_news.json
-          git diff --staged --quiet || git commit -m "혼잡도·축제소식 자동 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git add festival_news.json
+          git diff --staged --quiet || git commit -m "축제·행사 소식 자동 갱신 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          # 그 사이 다른 실행이 먼저 push했을 수 있으니, 최신 내용을 받아 정리한 뒤 올린다
           git pull --rebase origin main
           git push
