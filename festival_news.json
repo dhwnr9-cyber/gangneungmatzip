@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-13T03:57:40+00:00",
+  "generated": "2026-10-13T11:31:26+00:00",
   "source": "https://www.gtdc.or.kr/pub/bbsevent.do",
   "items": [
     {
@@ -11,6 +11,11 @@
       "title": "[타 기관 홍보] 「헬로 초록씨!」전시 안내 (하슬라아트월드)",
       "date": "2026-09-01",
       "url": "https://www.gtdc.or.kr/pub/bbsevent/9548.do"
+    },
+    {
+      "title": "[타 기관 홍보] 강릉커피축제 인문 체험단 모집 안내(10월 20일까지 신청)",
+      "date": "2026-10-13",
+      "url": "https://www.gtdc.or.kr/pub/bbsevent/9584.do"
     },
     {
       "title": "[강릉 베이커리 포럼] 강릉 베이커리 포럼 개최 안내",
@@ -36,11 +41,6 @@
       "title": "[타 기관 홍보] 「ART CABINET : PICASSO + DALÍ × TÀPIES — 더하고 교차하다」(하슬라아트월드)",
       "date": "2026-09-21",
       "url": "https://www.gtdc.or.kr/pub/bbsevent/9569.do"
-    },
-    {
-      "title": "[제2회 강릉 빵축제 「빵굽는 마을 오죽」]  \"빵내음 머무는 한옥의 하룻밤\" 숙박 체험단 모집",
-      "date": "2026-09-15",
-      "url": "https://www.gtdc.or.kr/pub/bbsevent/9559.do"
     }
   ]
 }
